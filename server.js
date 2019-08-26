@@ -1,16 +1,43 @@
-import { nodeEnv, appName, logStars, address } from './config';
-import io from "./connections/socket"
-// import mongoose from './database/config/connection';
-import userRouter from "./api/routers/user";
-// import passport from "passport";
-import express from "express";
+const dotenv = require('dotenv');
+dotenv.config();
+
+const express = require('express'),
+    app = express(),
+    port = process.env.PORT || 6000,
+    hostname = process.env.HOSTNAME || 'localhost'
+
+const router = express.Router();
+const appRoot = require('app-root-path');
+const cors = require('cors');
+const cookieParser = require("cookie-parser");
+const passport = require('passport');
+const morgan = require('morgan');
+
+const winston = require("./api/config/logger");
+const userRoute = require("./api/routers/user");
+const friendRoute = require("./api/routers/friends");
 
 
-io;
-const server = express();
-server.use('/api/v1/', userRouter);
+app.use(cors());
+app.options('*', cors())
+app.use(express.static('public'));
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
+app.use(morgan('combined', {
+    stream: winston.stream
+}));
 
-// Start server
-server.listen(address.port, () => {
-    console.info(`${appName} is started on`, address.hostname +':'+ address.port);
+// Authentication middleware
+require(`${appRoot}/api/middleware/authentication/passport`)
+
+// init route
+userRoute(router);
+friendRoute(router);
+
+app.use("/api/v1/",router);
+
+app.listen(port, () => {
+    console.info('Be my guest API started on '+ hostname+ ':' + port);
 });
